@@ -1,0 +1,8 @@
+# Le dépôt n'est pas un paquet installable : les scripts se lancent depuis la
+# racine (python pipeline/xxx.py). Ce fichier ne sert qu'à configurer pytest.
+# Dépendances : requirements.txt (exécution) et requirements-dev.txt (tests).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+xfail_strict = true

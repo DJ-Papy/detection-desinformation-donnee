@@ -1,2 +1,13 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# Données sous droits : ne jamais versionner le corpus Europresse
+data/corpus/
+*.pdf
+!docs/memoire/*.pdf
+
+# Sorties et caches du pipeline
+resultats/
+cache_insee.db
+*.db
