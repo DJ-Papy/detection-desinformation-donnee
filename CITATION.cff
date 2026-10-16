@@ -5,7 +5,7 @@ type: software
 version: 2.0.0
 date-released: "2026-10-16"
 license: MIT
-repository-code: "https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__"
+repository-code: "https://github.com/DJ-Papy/detection-desinformation-donnee"
 authors:
   - family-names: PRIVAT
     given-names: Florian

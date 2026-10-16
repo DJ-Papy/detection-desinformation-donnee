@@ -3,7 +3,7 @@
 **Pipeline interprétable de vérification des chiffres de la presse française par confrontation aux séries de l'INSEE.**
 Code du mémoire de recherche appliquée de Florian PRIVAT, MSc 2 Manager en Data Marketing, INSEEC, 2025-2026.
 
-[![tests](https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__/actions/workflows/tests.yml/badge.svg)](https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__/actions/workflows/tests.yml)
+[![tests](https://github.com/DJ-Papy/detection-desinformation-donnee/actions/workflows/tests.yml/badge.svg)](https://github.com/DJ-Papy/detection-desinformation-donnee/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 [![Licence : MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
@@ -102,8 +102,8 @@ Le détail (entrées, sorties, paramètres) est dans [`docs/architecture.md`](do
 Prérequis : Python 3.10 ou plus récent, Git.
 
 ```bash
-git clone https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__.git
-cd __GITHUB_REPO__
+git clone https://github.com/DJ-Papy/detection-desinformation-donnee.git
+cd detection-desinformation-donnee
 python -m venv .venv
 source .venv/bin/activate          # Windows : .venv\Scripts\activate
 pip install -r requirements-dev.txt
