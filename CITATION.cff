@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "Si vous utilisez ce code, merci de citer le logiciel et le mémoire associé."
+title: "Détecter la désinformation médiatique par la donnée : pipeline de vérification des chiffres de presse"
+type: software
+version: 2.0.0
+date-released: "2026-10-16"
+license: MIT
+repository-code: "https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__"
+authors:
+  - family-names: PRIVAT
+    given-names: Florian
+abstract: >-
+  Pipeline modulaire et interprétable qui extrait les affirmations chiffrées
+  d'articles de presse française, les classe en deux régimes de
+  vérifiabilité, confronte les chiffres vérifiables aux séries de l'INSEE
+  (API SDMX de la BDM) et mesure la divergence des chiffres retenus par
+  différents médias pour un même événement.
+keywords:
+  - désinformation
+  - fact-checking automatisé
+  - données chiffrées
+  - cadrage
+  - presse française
+  - INSEE
+  - journalisme computationnel
+preferred-citation:
+  type: thesis
+  thesis-type: "Mémoire de recherche appliquée, MSc 2 Manager en Data Marketing"
+  title: "Détecter la désinformation médiatique par la donnée. Vérification automatisée des chiffres de la presse française par recoupement avec les sources officielles"
+  authors:
+    - family-names: PRIVAT
+      given-names: Florian
+  institution:
+    name: INSEEC
+  year: 2026
+  languages:
+    - fr
