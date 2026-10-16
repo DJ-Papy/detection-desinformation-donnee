@@ -1,9 +1,10 @@
 """Module 0 — fonctions de parsing testables sans PDF Europresse.
 
-Le parcours complet d'un PDF n'est pas testé ici : les exports Europresse
-sont sous droits et ne peuvent pas être versionnés. Pour vérifier le parser
-sur vos propres exports : `python pipeline/module0_parser_europresse.py
-export.pdf` (mode diagnostic, avec contrôle du nombre de mots).
+Le parcours complet d'un PDF est testé dans test_module0_pdf.py, sur un
+PDF fictif généré à la volée : les exports Europresse réels sont sous droits
+et ne peuvent pas être versionnés. Pour vérifier le parser sur vos propres
+exports : `python pipeline/module0_parser_europresse.py export.pdf` (mode
+diagnostic, avec contrôle du nombre de mots).
 """
 
 import pytest

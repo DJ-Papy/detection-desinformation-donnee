@@ -115,7 +115,7 @@ Seule dépendance d'exécution : `pdfplumber` (lecture des PDF). Le reste utilis
 
 Toutes les commandes se lancent **depuis la racine du dépôt**.
 
-**Vérifier l'installation** (85 tests, sans réseau, moins d'une seconde) :
+**Vérifier l'installation** (90 tests, sans réseau, environ une seconde) :
 
 ```bash
 python -m pytest
@@ -179,7 +179,7 @@ Le dossier `data/corpus/` est exclu de Git par `.gitignore` : vos articles ne se
 ```text
 .
 ├── pipeline/                 code (un fichier par module, lancé depuis la racine)
-├── tests/                    tests pytest, sans réseau
+├── tests/                    tests pytest, sans réseau (dont un PDF fictif généré à la volée)
 ├── data/
 │   ├── README.md             format attendu, droits, reconstitution du corpus
 │   └── exemple/              corpus fictif de 10 articles

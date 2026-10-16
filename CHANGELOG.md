@@ -27,7 +27,7 @@ Version correspondant aux règles décrites dans le mémoire déposé le 15 juil
 - `corpus_io.py` : lecture d'un corpus CSV avec détection du séparateur.
 - Interface en ligne de commande pour `pipeline_complet.py`.
 - Corpus fictif d'exemple (`data/exemple/`).
-- 85 tests pytest sans réseau, dont 5 limites connues écrites en `xfail` strict ; intégration continue GitHub Actions (Python 3.10 à 3.13).
+- 90 tests pytest sans réseau, dont 5 limites connues écrites en `xfail` strict et un parcours complet du module 0 sur un PDF fictif à la mise en page Europresse ; intégration continue GitHub Actions (Python 3.10 à 3.13).
 - Documentation : `README.md`, `docs/`, `data/README.md`, `CITATION.cff`, licence MIT.
 
 ### Corrigé

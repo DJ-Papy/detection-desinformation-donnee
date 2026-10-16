@@ -1,2 +1,3 @@
 -r requirements.txt
 pytest>=7
+reportlab>=3.6  # génère le PDF fictif du test du module 0
