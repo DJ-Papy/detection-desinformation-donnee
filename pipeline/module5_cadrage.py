@@ -116,32 +116,62 @@ class AnalyseCadrage:
 # pouvoir être justifié. Volontairement, on évite les termes politiquement
 # orientés (ex : on ne met PAS "précarité" d'un côté et "compétitivité" de
 # l'autre, ce qui capterait mécaniquement le clivage gauche/droite).
-# Le codebook doit figurer en annexe du mémoire.
+#
+# v2 : les listes sont alignées sur l'Annexe 2 du mémoire (« Codebook Entman
+# pour l'analyse de cadrage »), qui fait foi. La version de juin utilisait
+# une liste différente. Les marqueurs sont recherchés comme mots entiers
+# (sans lemmatisation : « condamner » ne capte pas « condamne »).
+# Rappel : la mesure Entman est secondaire ; elle n'entre pas dans le calcul
+# de l'indice de divergence des sélections (mesure B).
 
 CODEBOOK_ENTMAN = {
     "definition_probleme": {
-        "description": "Manière de nommer/qualifier la situation",
-        "marqueurs": ["crise", "dérapage", "envolée", "alerte", "alarmant",
-                      "record", "historique", "inédit", "préoccupant",
-                      "explosion", "flambée", "spirale"],
+        "description": "F1 — Ce qui est présenté comme problématique : nature, "
+                       "ampleur, caractère anormal ou attendu",
+        "marqueurs": [
+            # substantifs de mise en cause
+            "crise", "dérive", "problème", "défi", "menace", "urgence",
+            # adjectifs d'ampleur
+            "massif", "historique", "record", "inédit", "préoccupant",
+            # verbes de constat négatif
+            "alerte", "s'inquiète", "déplore", "dénonce",
+        ],
     },
     "attribution_causale": {
-        "description": "Désignation des causes/responsables",
-        "marqueurs": ["à cause de", "en raison de", "responsable", "faute de",
-                      "dû à", "résulte de", "provoqué par", "imputable",
-                      "conséquence de", "s'explique par"],
+        "description": "F2 — Cause attribuée au phénomène : responsabilité "
+                       "d'un acteur, mécanisme économique, facteur exogène",
+        "marqueurs": [
+            # locutions causales
+            "en raison de", "du fait de", "à cause de", "en conséquence",
+            "imputable à",
+            # verbes d'attribution
+            "provoque", "entraîne", "génère", "explique", "résulte de",
+            # substantifs de responsabilité
+            "responsabilité", "imputabilité", "faute", "politique",
+        ],
     },
     "jugement_moral": {
-        "description": "Évaluation morale explicite",
-        "marqueurs": ["scandale", "injuste", "irresponsable", "courage",
-                      "rigueur", "laxisme", "gaspillage", "sacrifice",
-                      "vertueux", "dérive", "abus"],
+        "description": "F3 — Évaluation normative de la situation ou des acteurs",
+        "marqueurs": [
+            # adjectifs évaluatifs
+            "inacceptable", "irresponsable", "courageux", "lâche",
+            "scandaleux", "légitime",
+            # verbes de jugement
+            "condamner", "saluer", "fustiger", "approuver", "regretter",
+            # modalités déontiques
+            "devrait", "doit", "ne peut pas", "il est urgent de",
+        ],
     },
     "remede": {
-        "description": "Solutions préconisées ou évoquées",
-        "marqueurs": ["réforme", "économies", "réduire", "augmenter", "taxer",
-                      "supprimer", "investir", "relancer", "coupe", "rabot",
-                      "effort budgétaire", "redressement"],
+        "description": "F4 — Action(s) proposée(s) pour résoudre le problème",
+        "marqueurs": [
+            # verbes prescriptifs
+            "proposer", "préconiser", "recommander", "annoncer", "prévoir",
+            # substantifs d'action
+            "plan", "mesure", "réforme", "solution", "politique",
+            # locutions injonctives
+            "il faut", "il convient de", "la solution passe par",
+        ],
     },
 }
 
@@ -318,11 +348,18 @@ class Module5Cadrage:
     # ---- Mesure A : Entman (interprétatif) ----
 
     def _scorer_entman(self, texte: str) -> Dict[str, int]:
-        """Compte les marqueurs de chaque fonction de cadrage."""
-        t = texte.lower()
+        """
+        Compte, pour chaque fonction, le nombre de marqueurs DISTINCTS présents.
+
+        v2 : recherche en mot entier (« doit » ne capte plus « droit »,
+        « plan » ne capte plus « planète »).
+        """
+        t = texte.lower().replace("’", "'")
         scores = {}
         for fonction, fiche in CODEBOOK_ENTMAN.items():
-            scores[fonction] = sum(1 for m in fiche["marqueurs"] if m in t)
+            scores[fonction] = sum(
+                1 for m in fiche["marqueurs"]
+                if re.search(rf"(?<!\w){re.escape(m)}(?!\w)", t))
         return scores
 
     def _scorer_acteurs(self, texte: str) -> Dict[str, int]:
@@ -418,14 +455,15 @@ class Module5Cadrage:
 # ============================================================================
 
 def demo():
-    """Démonstration sur des articles fictifs simulant l'événement déficit."""
+    """Démonstration sur des articles FICTIFS (médias et textes inventés)
+    simulant la couverture du déficit public 2023."""
     print("\n" + "=" * 68)
     print("DÉMO — MODULE 5 sur un événement simulé")
     print("=" * 68)
 
     articles = [
         ArticleCadrage(
-            "art_figaro", "Le Figaro", "L'envolée du déficit à 5,5%",
+            "art_a", "Quotidien A", "L'envolée du déficit à 5,5%",
             "Le déficit atteint 5,5% du PIB, un dérapage grave. La dette grimpe "
             "à 110,6%. Le gouvernement doit faire des économies : 10 milliards, "
             "voire 50 milliards. La rigueur budgétaire s'impose, un effort de "
@@ -433,7 +471,7 @@ def demo():
             "2024-03-27",
             ["5,5 %", "110,6 %", "10 milliards", "50 milliards"]),
         ArticleCadrage(
-            "art_libe", "Libération", "Taxation des plus riches",
+            "art_b", "Quotidien B", "Taxation des plus riches",
             "Face au déficit de 5,5%, une autre voie : taxer les plus riches "
             "pourrait rapporter 42 milliards. Les recettes fiscales pourraient "
             "augmenter de 20 milliards. Plutôt que des économies sur les services "
@@ -441,7 +479,7 @@ def demo():
             "2024-03-27",
             ["5,5 %", "42 milliards", "20 milliards"]),
         ArticleCadrage(
-            "art_monde", "Le Monde", "Le dérapage du déficit embarrasse le gouvernement",
+            "art_c", "Quotidien C", "Le dérapage du déficit embarrasse le gouvernement",
             "Le déficit s'établit à 5,5%, en raison d'un ralentissement. La dette "
             "atteint 110,6%. Le gouvernement, responsable de la trajectoire, doit "
             "trouver 21 milliards. Une réforme et des économies sont à l'étude.",
@@ -449,7 +487,7 @@ def demo():
             ["5,5 %", "110,6 %", "21 milliards"]),
         # Faux positif : article dans la fenêtre mais hors sujet
         ArticleCadrage(
-            "art_hs", "Le Point", "Des leçons de vie face à la mort",
+            "art_hs", "Hebdomadaire D", "Des leçons de vie face à la mort",
             "Un témoignage bouleversant sur la fin de vie et le deuil.",
             "2024-03-27", ["85 %"]),
     ]

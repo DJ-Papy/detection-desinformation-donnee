@@ -236,6 +236,9 @@ class ClientBDM:
 
     # Valeurs mock (issues de la grille des événements INSEE)
     # Format : (idbank, periode) → valeur. idbank mis à jour (vérifiés CSV).
+    # ⚠️ Valeurs de DÉMONSTRATION, saisies à la main d'après les premières
+    # publications INSEE : elles ne sont pas garanties et ont pu être révisées
+    # depuis. Seul le mode « production » fait foi.
     MOCK_VALEURS = {
         ("011814632", "2023-07"): 4.3,
         ("011814632", "2023-03"): 5.6,
@@ -289,16 +292,20 @@ class ClientBDM:
         Returns:
             DonneeOfficielle
         """
+        # Correctif (octobre 2026) : en v1, le mode mock lisait ET écrivait le
+        # même cache SQLite que le mode production. Une valeur simulée pouvait
+        # donc ressortir plus tard, en production, étiquetée « INSEE-BDM
+        # (cache) ». Le mock ne touche désormais plus au cache.
+        if self.mode == "mock":
+            return self._recuperer_mock(idbank, periode, libelle)
+
         # 1. Vérifier le cache
         cached = self._lire_cache(idbank, periode)
         if cached is not None:
             return cached
 
-        # 2. Selon le mode
-        if self.mode == "mock":
-            donnee = self._recuperer_mock(idbank, periode, libelle)
-        else:
-            donnee = self._recuperer_api(idbank, periode, libelle, inclure_revisions)
+        # 2. Interroger l'API
+        donnee = self._recuperer_api(idbank, periode, libelle, inclure_revisions)
 
         # 3. Mettre en cache si trouvé
         if donnee.trouve:
@@ -498,8 +505,9 @@ class Module3MatchingINSEE:
       4. Retourner la donnée officielle pour comparaison (Module 4)
     """
 
-    def __init__(self, mode: str = "mock"):
-        self.client = ClientBDM(mode=mode)
+    def __init__(self, mode: str = "mock", cache_path: str = "cache_insee.db"):
+        # cache_path=":memory:" évite d'écrire un fichier (tests, démos)
+        self.client = ClientBDM(mode=mode, cache_path=cache_path)
         self.corresp = CorrespondanceIdbank()
 
     def matcher(self, claim_id: str, indicateur: str, periode: str,
@@ -547,7 +555,7 @@ def tests_unitaires():
     print("TESTS UNITAIRES — MODULE 3 : MATCHING INSEE (mode mock)")
     print("=" * 64)
 
-    m3 = Module3MatchingINSEE(mode="mock")
+    m3 = Module3MatchingINSEE(mode="mock", cache_path=":memory:")
     erreurs, total = 0, 0
 
     cas = [

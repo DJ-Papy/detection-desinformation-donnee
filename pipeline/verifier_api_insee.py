@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-TEST M3 EN CONDITIONS RÉELLES — à lancer sur TA machine (accès Internet)
-========================================================================
+VÉRIFICATION DE L'API INSEE (module 3 en conditions réelles)
+=============================================================
+(anciennement test_m3_reel.py — renommé pour ne pas être confondu avec un
+test automatique : ce script interroge réellement bdm.insee.fr)
 
 Ce script teste le client API INSEE sur les 4 séries vérifiées, en
 interrogeant réellement bdm.insee.fr. Il vérifie aussi la cohérence des
@@ -9,10 +11,9 @@ valeurs renvoyées.
 
 PRÉREQUIS
   - Être sur une machine avec accès Internet (PAS derrière un proxy bloquant)
-  - Avoir le fichier module3_matching_insee.py dans le même dossier
 
-UTILISATION
-  python test_m3_reel.py
+UTILISATION (depuis la racine du dépôt)
+  python pipeline/verifier_api_insee.py
 
 Le script affiche, pour chaque série :
   - la valeur récupérée pour une période connue
@@ -20,9 +21,13 @@ Le script affiche, pour chaque série :
   - le XML brut en cas de problème (pour me l'envoyer si ça coince)
 
 EN CAS DE PROBLÈME
-  Si une série échoue, le script affiche l'URL et l'erreur. Copie-moi le
-  message : je corrige. Les causes possibles : format de période, en-tête
-  HTTP, ou structure XML légèrement différente selon les séries.
+  Si une série échoue, le script affiche l'URL et l'erreur. Causes possibles :
+  format de période, en-tête HTTP, idbank arrêté ou remplacé par l'INSEE
+  (changement de base), structure XML légèrement différente selon les séries.
+
+Les « valeurs attendues » ci-dessous sont des premières publications INSEE
+saisies à la main : une révision ultérieure peut produire un écart (⚠️) sans
+que le module soit en cause.
 """
 
 import sys
@@ -70,7 +75,7 @@ def main():
     ok, contenu = test_url_directe("001688527")
     if not ok:
         print(f"❌ Échec de connexion : {contenu}")
-        print("\n→ Vérifie ta connexion / proxy. Si l'erreur persiste, copie-la moi.")
+        print("\n→ Vérifiez la connexion / le proxy.")
         return
     print("✅ Connexion OK, l'API répond.")
     print(f"   Aperçu du XML reçu (200 premiers caractères) :")
@@ -78,7 +83,7 @@ def main():
 
     # Étape 1 : test via le module M3 sur les 4 séries
     print("\n[1] Test des 4 séries via le module M3 (mode production)\n")
-    m3 = Module3MatchingINSEE(mode="production")
+    m3 = Module3MatchingINSEE(mode="production", cache_path=":memory:")
 
     succes, total = 0, 0
     for indic, periode, attendu, tol, libelle in TESTS:
@@ -115,7 +120,7 @@ def main():
         print("Certaines séries posent problème. Causes possibles :")
         print("  - format de période (mensuel 2023-07 vs trimestriel 2023-Q4)")
         print("  - valeur attendue à ajuster (révisions INSEE)")
-        print("  → Copie-moi la sortie complète, j'ajuste le module.")
+        print("  - idbank modifié par l'INSEE (voir docs/idbank_insee.md)")
     print("=" * 68)
 
 

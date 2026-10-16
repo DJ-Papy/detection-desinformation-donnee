@@ -11,9 +11,17 @@ statistique du corpus réel :
   1. Volume RÉEL d'articles uniques (vs comptage brut avec doublons)
   2. Distribution par média
   3. Distribution temporelle (par mois/trimestre)
-  4. Couverture des événements INSEE (rapproche les dates des publications)
-  5. Profil de vérifiabilité (% régime 1 fact-checkable vs régime 2 cadrage)
-  6. Articles couvrant le même événement (pour l'analyse inter-médias)
+  4. Profil de vérifiabilité (% régime 1 fact-checkable vs régime 2 cadrage)
+  5. Profil des articles
+
+VERSION 2 (§2.2.2 du mémoire)
+    - En cas de doublon, on conserve la version dont le taux d'extraction
+      (mots extraits / mots revendiqués par Europresse) est le plus proche
+      de 1, au lieu de la première rencontrée.
+    - Le rattachement des articles à une grille de 16 dates INSEE codées en
+      dur (v1, « 14 événements ») est supprimé : les événements du mémoire
+      (27) sont reconstruits par `analyse_corpus.py` (indicateur dominant ×
+      semaine, ≥ 3 médias).
 
 POURQUOI CET OUTIL
     Le suivi de collecte (Cowork) comptabilise un article dans plusieurs
@@ -22,7 +30,10 @@ POURQUOI CET OUTIL
     volume réel et reproductible, traçable pour la charte IA.
 
 USAGE
-    python outil_corpus_stats.py /chemin/vers/dossier_pdf [rapport.json]
+    python outil_corpus_stats.py /chemin/vers/dossier_pdf [rapport.json] [corpus.csv]
+
+    Le fichier .csv produit (id;media;date;titre;texte…) est l'entrée de
+    `analyse_corpus.py` et de `pipeline_complet.py`.
 
     ou en Python :
         from outil_corpus_stats import AnalyseurCorpus
@@ -30,7 +41,7 @@ USAGE
         analyseur.charger_dossier("/chemin/dossier")
         analyseur.rapport()
 
-Auteur : Florian, mai 2026.
+Auteur : Florian, mai 2026 (v2 reconstruite en octobre 2026).
 """
 
 from __future__ import annotations
@@ -54,37 +65,6 @@ logger = logging.getLogger("Corpus")
 
 
 # ============================================================================
-# CALENDRIER DES ÉVÉNEMENTS INSEE (rappel de la grille)
-# ============================================================================
-# Format : (indicateur, date_publication_iso, periode, valeur)
-# Sert à rattacher chaque article à l'événement INSEE qu'il couvre
-# potentiellement (fenêtre de 0 à 4 jours après publication).
-
-EVENEMENTS_INSEE = [
-    # Inflation mensuelle (date provisoire INSEE)
-    ("inflation", "2023-03-31", "2023-03", 5.6),
-    ("inflation", "2023-06-30", "2023-06", 4.5),
-    ("inflation", "2023-07-28", "2023-07", 4.3),
-    ("inflation", "2023-08-31", "2023-08", 4.8),
-    ("inflation", "2023-09-29", "2023-09", 4.9),
-    ("inflation", "2024-08-30", "2024-08", 1.9),
-    # Chômage trimestriel
-    ("chômage", "2023-05-16", "2023-Q1", 7.1),
-    ("chômage", "2023-08-11", "2023-Q2", 7.2),
-    ("chômage", "2023-11-15", "2023-Q3", 7.4),
-    ("chômage", "2024-02-13", "2023-Q4", 7.5),
-    ("chômage", "2024-05-17", "2024-Q1", 7.5),
-    ("chômage", "2024-08-09", "2024-Q2", 7.3),
-    # PIB
-    ("PIB", "2024-01-30", "2023-Q4", 0.1),
-    ("PIB", "2024-08-30", "2024-Q2", 0.2),
-    # Dette / déficit (publication 26 mars 2024 = déficit 2023)
-    ("déficit", "2024-03-26", "2023", 5.5),
-    ("dette", "2023-09-29", "2023-Q2", 111.8),
-]
-
-
-# ============================================================================
 # STRUCTURES
 # ============================================================================
 
@@ -101,7 +81,6 @@ class StatsArticle:
     nb_regime1: int = 0       # claims fact-checkables (vérifiabilité forte)
     nb_regime2: int = 0       # claims de cadrage (vérifiabilité faible)
     nb_indetermine: int = 0
-    evenement_insee: str = "" # événement rattaché, si proche d'une publi INSEE
 
     @property
     def profil(self) -> str:
@@ -161,9 +140,18 @@ class AnalyseurCorpus:
         for art in articles:
             self.nb_articles_bruts += 1
             self.occurrences[art.article_id].append(nom)
-            # Déduplication : on garde la première occurrence
-            if art.article_id not in self.articles_uniques:
+            # Déduplication (v2) : on garde la version dont le taux
+            # d'extraction est le plus proche de l'optimum (1.0)
+            deja = self.articles_uniques.get(art.article_id)
+            if deja is None or self._ecart_optimum(art) < self._ecart_optimum(deja):
                 self.articles_uniques[art.article_id] = art
+
+    @staticmethod
+    def _ecart_optimum(art: ArticleEuropresse) -> float:
+        """Distance du taux d'extraction à 1.0 (inf si pas de compteur)."""
+        if not art.mots_revendiques:
+            return float("inf")
+        return abs(art.taux_extraction - 1.0)
 
     # ---- Analyse ----
 
@@ -178,7 +166,8 @@ class AnalyseurCorpus:
             for s in structs:
                 res = self.clf.classer(
                     s.claim_id, s.phrase_originale,
-                    s.indicateur, s.unite, s.est_variation, s.modificateur
+                    s.indicateur, s.unite, s.est_variation, s.modificateur,
+                    date_article=art.date_publication,
                 )
                 if res.regime == Regime.FORTE:
                     n1 += 1
@@ -186,8 +175,6 @@ class AnalyseurCorpus:
                     n2 += 1
                 else:
                     nind += 1
-
-            evt = self._rattacher_evenement(art)
 
             self.stats[aid] = StatsArticle(
                 article_id=aid,
@@ -200,31 +187,7 @@ class AnalyseurCorpus:
                 nb_regime1=n1,
                 nb_regime2=n2,
                 nb_indetermine=nind,
-                evenement_insee=evt,
             )
-
-    def _rattacher_evenement(self, art: ArticleEuropresse) -> str:
-        """
-        Rattache un article à un événement INSEE si sa date de publication
-        tombe dans les 0-4 jours après une publication INSEE.
-        """
-        if not art.date_publication:
-            return ""
-        from datetime import datetime, timedelta
-        try:
-            d_art = datetime.fromisoformat(art.date_publication)
-        except ValueError:
-            return ""
-
-        for indic, date_insee, periode, _ in EVENEMENTS_INSEE:
-            try:
-                d_insee = datetime.fromisoformat(date_insee)
-            except ValueError:
-                continue
-            delta = (d_art - d_insee).days
-            if 0 <= delta <= 4:
-                return f"{indic} {periode} (publi {date_insee})"
-        return ""
 
     # ---- Rapport ----
 
@@ -284,32 +247,14 @@ class AnalyseurCorpus:
         for profil, n in par_profil.most_common():
             lignes.append(f"   {libelles.get(profil, profil):40s} : {n:>4} article(s)")
 
-        # 6. Couverture des événements INSEE
-        evts = defaultdict(list)
-        for s in self.stats.values():
-            if s.evenement_insee:
-                evts[s.evenement_insee].append(s.source_media)
-        lignes.append(f"\n6. COUVERTURE DES ÉVÉNEMENTS INSEE")
-        if evts:
-            lignes.append(f"   {len(evts)} événement(s) INSEE couvert(s) :")
-            for evt, medias in sorted(evts.items()):
-                n_medias = len(set(medias))
-                marqueur = "🎯" if n_medias >= 3 else "  "
-                lignes.append(f"   {marqueur} {evt:35s} : {n_medias} média(s) — {', '.join(sorted(set(medias)))}")
-            # Compter les événements exploitables pour l'analyse inter-médias
-            exploitables = sum(1 for m in evts.values() if len(set(m)) >= 3)
-            lignes.append(f"\n   → {exploitables} événement(s) avec ≥3 médias (analyse inter-médias possible)")
-        else:
-            lignes.append("   Aucun article rattaché à un événement INSEE de la grille.")
-            lignes.append("   (normal si le corpus ne couvre pas ces dates précises)")
-
-        # 7. Synthèse exploitabilité
+        # 6. Synthèse exploitabilité
         n_factcheck = par_profil.get("fact_checkable", 0) + par_profil.get("mixte", 0)
-        lignes.append(f"\n7. SYNTHÈSE D'EXPLOITABILITÉ")
+        lignes.append(f"\n6. SYNTHÈSE D'EXPLOITABILITÉ")
         lignes.append(f"   Articles à dominante fact-checkable ou mixte : {n_factcheck}/{n_uniques}")
         lignes.append(f"   → Périmètre du fact-checking numérique (régime 1)")
         lignes.append(f"   Articles à dominante cadrage : {par_profil.get('cadrage', 0)}/{n_uniques}")
         lignes.append(f"   → Périmètre de l'analyse de framing (régime 2)")
+        lignes.append(f"\n   Événements inter-médias : voir analyse_corpus.py")
 
         return "\n".join(lignes)
 
@@ -336,12 +281,12 @@ class AnalyseurCorpus:
         with open(chemin, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f, delimiter=";", quoting=csv.QUOTE_ALL)
             writer.writerow(["id", "media", "date", "titre", "texte",
-                             "evenement_insee", "profil", "nb_claims"])
+                             "profil", "nb_claims"])
             for aid, art in self.articles_uniques.items():
                 s = self.stats[aid]
                 writer.writerow([
                     aid, art.source_media, art.date_publication, art.titre,
-                    art.texte, s.evenement_insee, s.profil, s.nb_claims,
+                    art.texte, s.profil, s.nb_claims,
                 ])
         logger.info(f"Corpus dédupliqué exporté : {chemin}")
 
@@ -371,3 +316,6 @@ if __name__ == "__main__":
     json_out = [a for a in sys.argv if a.endswith(".json")]
     if json_out:
         analyseur.exporter_json(json_out[0])
+    csv_out = [a for a in sys.argv[2:] if a.endswith(".csv")]
+    if csv_out:
+        analyseur.exporter_csv_corpus(csv_out[0])

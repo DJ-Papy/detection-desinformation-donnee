@@ -27,7 +27,21 @@ Architecture modulaire :
 Cette architecture permet de remplacer un sous-module si le format Europresse
 évolue ou si on traite un autre fournisseur (Factiva, LexisNexis).
 
-Auteur : Florian, mai 2026.
+VERSION 2 — corrections décrites au §2.2.2 du mémoire (reconstruites)
+  - Sur-extraction : sur certains cahiers spéciaux, le segmenteur ne voyait
+    pas la frontière de l'article suivant et agrégeait plusieurs articles
+    (jusqu'à 718 % du nombre de mots attendu). Le corps est désormais tronqué
+    à la première mention de copyright Europresse, marqueur de fin d'article
+    (`EuropressePagePattern.REGEX_FIN_ARTICLE`).
+  - Métadonnée « média » : certains articles portaient un intitulé de rubrique
+    au lieu du nom du titre. Le nom est désormais normalisé
+    (`normaliser_media`), la valeur brute est conservée dans
+    `source_media_brut`.
+  ⚠️ Le code exact de ces corrections n'a pas été conservé ; il est réécrit
+  d'après le mémoire. Les marqueurs de fin d'article sont ceux du pied de page
+  Europresse usuel : à vérifier sur vos propres exports.
+
+Auteur : Florian, mai 2026 (v2 reconstruite en octobre 2026).
 """
 
 from __future__ import annotations
@@ -87,6 +101,9 @@ class ArticleEuropresse:
     # Champs utilisés en aval par le pipeline
     sujet: str = ""                    # À renseigner manuellement ou via M5
 
+    # v2 : nom du média tel que lu dans l'encart, avant normalisation
+    source_media_brut: str = ""
+
     # Diagnostics
     warnings: List[str] = field(default_factory=list)
 
@@ -139,6 +156,74 @@ class EuropressePagePattern:
 
     # Mots typiques de la page de couverture / sommaire (à ignorer)
     MOTS_COUVERTURE = {"Documents sauvegardés", "Sommaire"}
+
+    # v2 : marqueurs déterministes de fin d'article (pied de page de copyright
+    # Europresse). Le corps est tronqué à la PREMIÈRE occurrence trouvée.
+    #   « © 2023 Le Monde. Tous droits réservés. »
+    #   « Le présent document est protégé par les lois et conventions
+    #     internationales sur le droit d'auteur… »
+    #   « Certificat émis le … à des fins de visualisation personnelle… »
+    REGEX_FIN_ARTICLE = re.compile(
+        r"(?:^|\n)\s*©\s*(?:19|20)\d{2}\b"
+        r"|Le présent document est protégé par les lois et conventions"
+        r"|Certificat émis le",
+        re.IGNORECASE,
+    )
+
+
+# ============================================================================
+# 1 bis. NORMALISATION DU NOM DE MÉDIA (v2)
+# ============================================================================
+
+# Noms canoniques du corpus du mémoire. Clé = motif recherché (minuscules,
+# sans accents ni apostrophes typographiques), valeur = nom normalisé.
+MEDIAS_CANONIQUES = {
+    "le monde": "Le Monde",
+    "les echos": "Les Échos",
+    "le figaro": "Le Figaro",
+    "liberation": "Libération",
+    "l'obs": "L'Obs",
+    "le nouvel observateur": "L'Obs",
+    "le point": "Le Point",
+    "afp": "AFP",
+    "agence france-presse": "AFP",
+    "agence france presse": "AFP",
+}
+
+# Repli : code source présent dans l'identifiant Europresse
+# (news·AAAAMMJJ·CODE·…). Seul « AFPD » a été observé de façon certaine dans
+# les exports du mémoire ; complétez ce dictionnaire avec les codes de vos
+# propres exports avant usage.
+CODES_SOURCE_EUROPRESSE = {
+    "AFPD": "AFP",
+}
+
+
+def _sans_accents(texte: str) -> str:
+    import unicodedata
+    texte = texte.replace("’", "'")
+    return "".join(c for c in unicodedata.normalize("NFD", texte)
+                   if unicodedata.category(c) != "Mn")
+
+
+def normaliser_media(nom_brut: str, article_id: str = "") -> str:
+    """
+    Ramène le nom de média lu dans l'encart à un nom canonique.
+
+    1. Recherche d'un titre connu dans la valeur brute
+       (« AFP - Infos Economiques » → « AFP », « Le Monde Page » → « Le Monde »).
+    2. À défaut (la métadonnée a capté un intitulé de rubrique), repli sur le
+       code source de l'identifiant Europresse.
+    3. À défaut, la valeur brute est conservée telle quelle.
+    """
+    brut = _sans_accents((nom_brut or "").lower()).strip()
+    for motif, canonique in MEDIAS_CANONIQUES.items():
+        if re.search(rf"(?<![\w']){re.escape(motif)}(?!\w)", brut):
+            return canonique
+    m = EuropressePagePattern.REGEX_ID.search(article_id or "")
+    if m and m.group(2) in CODES_SOURCE_EUROPRESSE:
+        return CODES_SOURCE_EUROPRESSE[m.group(2)]
+    return nom_brut
 
 
 # ============================================================================
@@ -475,9 +560,23 @@ class EuropresseBodyExtractor:
             morceaux_corps.append(texte)
 
         texte_complet = "\n\n".join(morceaux_corps)
+        texte_complet = self.tronquer_fin_article(texte_complet)
         texte_complet = self._nettoyer(texte_complet)
 
         return titre, texte_complet
+
+    def tronquer_fin_article(self, texte: str) -> str:
+        """
+        v2 : coupe le texte à la première mention de copyright Europresse.
+
+        Corrige la sur-extraction observée sur les cahiers spéciaux, où le
+        corps d'un article absorbait les articles suivants faute de frontière
+        détectée (§2.2.2 du mémoire : 13 articles rectifiés).
+        """
+        m = self.pattern.REGEX_FIN_ARTICLE.search(texte)
+        if m:
+            return texte[:m.start()]
+        return texte
 
     def _extraire_corps_multicolonnes(self, page, y_debut: float) -> str:
         """
@@ -755,7 +854,9 @@ class EuropresseParser:
             article_id=meta["article_id"],
             source_pdf=nom_pdf,
             pages_dans_pdf=numeros_pages,
-            source_media=meta["source_media"],
+            source_media=normaliser_media(meta["source_media"],
+                                          meta["article_id"]),
+            source_media_brut=meta["source_media"],
             type_source=meta["type_source"],
             couverture_geographique=meta["couverture_geographique"],
             provenance=meta["provenance"],

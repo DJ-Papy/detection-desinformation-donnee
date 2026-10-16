@@ -41,7 +41,33 @@ MÉTHODE
 Entrée  : ClaimStructure (Module 2) OU ClaimCandidat (Module 1) + phrase
 Sortie  : RegimeVerifiabilite (régime, score, justification, marqueurs)
 
-Auteur : Florian, mai 2026.
+═══════════════════════════════════════════════════════════════════════
+VERSION 2 — règles décrites au §2.4.1 du mémoire (reconstruites)
+═══════════════════════════════════════════════════════════════════════
+La version 1 laissait la règle « décision par score » classer en régime 1
+un chiffre dépourvu de tout indicateur officiel : il suffisait d'un « % »
+(+0,5) et d'un verbe de constat (+1). Ce biais surévaluait le régime 1
+(plus de 3 700 claims sur le corpus). La version 2 ajoute :
+
+  CONDITION NÉCESSAIRE : aucun claim en régime 1 sans indicateur officiel
+    explicitement identifié dans la phrase. Un score favorable au régime 1
+    sans indicateur aboutit désormais à « indéterminé ».
+
+  EXCLUSION 1 — pays étranger : un indicateur rattaché à un pays étranger,
+    sans marqueur français (France, Insee…), n'est pas une observation INSEE
+    → régime 2.
+  EXCLUSION 2 — année future : une année postérieure à celle de l'article
+    signale un objectif ou une projection → régime 2.
+  EXCLUSION 3 — « % du PIB » : un ratio exprimé en pourcentage du PIB
+    (dette, déficit, dépenses…) ne doit pas être pris pour le taux de
+    croissance. Le PIB n'est alors pas retenu comme indicateur ; l'indicateur
+    réellement visé (dette, déficit) l'est s'il est présent.
+
+⚠️ Le code de cette version 2 n'a pas été conservé par l'auteur : il a été
+réécrit en octobre 2026 à partir de la description du mémoire. Les règles
+sont celles du §2.4.1, mais l'identité exacte des résultats (316 claims en
+régime 1 sur 6 399) n'a pas pu être revérifiée faute d'accès au corpus.
+Voir docs/reproduire_les_resultats.md.
 """
 
 from __future__ import annotations
@@ -159,6 +185,32 @@ class ClassifieurRegime:
     # (sauf dette/PIB en niveau), plus souvent des budgets/dépenses/objectifs
     UNITES_BUDGETAIRES = ["milliard", "milliards", "million", "millions"]
 
+    # --- v2, exclusion 1 : pays étrangers (racines, avec frontière de mot) ---
+    # Une liste fermée et volontairement courte : les partenaires les plus
+    # cités par la presse économique française. À compléter si besoin.
+    REGEX_PAYS_ETRANGER = re.compile(
+        r"\b(?:allemagne|allemand\w*|espagne|espagnol\w*|italie|italien\w*"
+        r"|royaume-uni|britanni\w*|états-unis|etats-unis|améri\w*"
+        r"|chine|chinois\w*|japon\w*|belgique|belge\w*|pays-bas|néerland\w*"
+        r"|suisse\w*|portugal|portugais\w*|grèce|grec\w*|russie|russe\w*"
+        r"|canada|canadien\w*|brésil\w*|inde|indien\w*|zone euro)\b"
+    )
+    # Marqueurs qui rattachent malgré tout le chiffre à la France
+    REGEX_MARQUEUR_FRANCE = re.compile(
+        r"\b(?:france|français\w*|hexagon\w*|insee)\b"
+    )
+
+    # --- v2, exclusion 2 : année future (comparée à l'année de l'article) ---
+    REGEX_ANNEE = re.compile(r"\b(20\d{2})\b")
+
+    # --- v2, exclusion 3 : ratio « X % du PIB » ---
+    REGEX_RATIO_PIB = re.compile(
+        r"\d+(?:[.,]\d+)?\s*(?:%|pour\s*cent|points?)\s*(?:de|du|d')\s*"
+        r"(?:pib|produit intérieur brut)\b"
+    )
+    MARQUEURS_PIB = ("produit intérieur brut", "pib", "croissance du pib",
+                     "croissance économique")
+
     def classer(
         self,
         claim_id: str,
@@ -167,6 +219,7 @@ class ClassifieurRegime:
         unite_m2: str = "",
         est_variation: bool = False,
         modificateur: str = "",
+        date_article: str = "",
     ) -> RegimeVerifiabilite:
         """
         Classe un claim.
@@ -178,6 +231,10 @@ class ClassifieurRegime:
             unite_m2: unité détectée par le Module 2 (optionnel)
             est_variation: le claim porte-t-il sur une variation
             modificateur: modificateur détecté ("environ", "près de"...)
+            date_article: date de publication (YYYY-MM-DD). Nécessaire à
+                l'exclusion « année future » (v2) ; si absente, l'exclusion
+                n'est pas appliquée (seuls les marqueurs « en 2025/2026/2027 »
+                de la v1 jouent).
 
         Returns:
             RegimeVerifiabilite
@@ -190,20 +247,45 @@ class ClassifieurRegime:
             "prevision": [],
             "acteur_politique": [],
             "unite_budgetaire": [],
+            "exclusion": [],
         }
 
         # --- Détection indices RÉGIME 1 ---
-        indicateur_trouve = ""
+        # v2 : on relève d'abord tous les indicateurs présents, puis on
+        # applique l'exclusion « % du PIB » avant de retenir le premier.
+        indicateurs_trouves: Dict[str, List[str]] = {}
         for indic, kws in self.INDICATEURS_OFFICIELS.items():
             for kw in kws:
                 if kw in p:
-                    marqueurs["indicateur_officiel"].append(kw)
-                    if not indicateur_trouve:
-                        indicateur_trouve = indic
-        # Renfort via l'indicateur du Module 2
-        if indicateur_m2 and indicateur_m2 in self.INDICATEURS_OFFICIELS:
+                    indicateurs_trouves.setdefault(indic, []).append(kw)
+
+        # v2 — EXCLUSION 3 : « 111,8 % du PIB » est un ratio, pas la croissance
+        if "PIB" in indicateurs_trouves and self.REGEX_RATIO_PIB.search(p):
+            del indicateurs_trouves["PIB"]
+            marqueurs["exclusion"].append("ratio_pct_pib")
+
+        indicateur_trouve = ""
+        for indic, kws in indicateurs_trouves.items():
+            marqueurs["indicateur_officiel"].extend(kws)
             if not indicateur_trouve:
+                indicateur_trouve = indic
+        # Renfort via l'indicateur du Module 2 (libellé seulement : la
+        # condition nécessaire v2 exige un indicateur repéré DANS la phrase)
+        if indicateur_m2 and indicateur_m2 in self.INDICATEURS_OFFICIELS:
+            if not indicateur_trouve and "ratio_pct_pib" not in marqueurs["exclusion"]:
                 indicateur_trouve = indicateur_m2
+
+        # v2 — EXCLUSION 1 : pays étranger sans marqueur français
+        if (self.REGEX_PAYS_ETRANGER.search(p)
+                and not self.REGEX_MARQUEUR_FRANCE.search(p)):
+            marqueurs["exclusion"].append("pays_etranger")
+
+        # v2 — EXCLUSION 2 : année postérieure à l'année de l'article
+        annee_article = date_article[:4] if date_article[:4].isdigit() else ""
+        if annee_article:
+            annees = [int(a) for a in self.REGEX_ANNEE.findall(p)]
+            if any(a > int(annee_article) for a in annees):
+                marqueurs["exclusion"].append("annee_future")
 
         for src in self.SOURCES_OFFICIELLES:
             if src in p:
@@ -275,6 +357,22 @@ class ClassifieurRegime:
         a_prevision = bool(marqueurs["prevision"])
         a_budget = bool(marqueurs["unite_budgetaire"])
         a_constat = bool(marqueurs["verbe_constat"])
+        exclusions = marqueurs.get("exclusion", [])
+
+        # v2 — Exclusion 1 (prioritaire) : chiffre rattaché à un pays étranger
+        if "pays_etranger" in exclusions:
+            return Regime.FAIBLE, (
+                "Chiffre rattaché à un pays étranger sans marqueur français : "
+                "ce n'est pas une observation INSEE → régime 2 (exclusion v2)."
+            )
+
+        # v2 — Exclusion 2 (prioritaire) : année postérieure à l'article
+        if "annee_future" in exclusions:
+            return Regime.FAIBLE, (
+                "Référence à une année postérieure à la date de l'article : "
+                "objectif ou projection, pas un fait mesuré → régime 2 "
+                "(exclusion v2)."
+            )
 
         # Règle 0 (PRIORITAIRE) : une prévision/objectif sur un indicateur, sans
         # attribution à une source officielle qui CONSTATE, reste du régime 2.
@@ -318,8 +416,15 @@ class ClassifieurRegime:
             )
 
         # Règle 5 : décision par score
+        # v2 — CONDITION NÉCESSAIRE : pas de régime 1 sans indicateur officiel
+        # explicite dans la phrase. En v1, cette branche renvoyait FORTE : un
+        # simple « % » accompagné d'un verbe de constat suffisait.
         if score_r1 > score_r2:
-            return Regime.FORTE, f"Score régime 1 ({score_r1}) > régime 2 ({score_r2})."
+            return Regime.INDETERMINE, (
+                f"Score régime 1 ({score_r1}) > régime 2 ({score_r2}) mais aucun "
+                f"indicateur officiel identifié dans la phrase : condition "
+                f"nécessaire du régime 1 non remplie (v2) → revue manuelle."
+            )
         elif score_r2 > score_r1:
             return Regime.FAIBLE, f"Score régime 2 ({score_r2}) > régime 1 ({score_r1})."
 
@@ -368,6 +473,30 @@ def tests_unitaires():
         if not ok:
             erreurs += 1
         print(f"{symbole} {libelle:30s} → {res.regime.value:35s} (conf={res.score_confiance})")
+        if not ok:
+            print(f"     Attendu : {attendu.value}")
+            print(f"     Justif  : {res.justification}")
+
+    # --- Cas propres à la version 2 (condition nécessaire + 3 exclusions) ---
+    cas_v2 = [
+        # (phrase, unite_m2, date_article, régime attendu, libellé)
+        ("Le taux d'épargne atteint 17,5 %.", "%", "2024-03-01",
+         Regime.INDETERMINE, "v2 : % sans indicateur officiel"),
+        ("L'inflation en Espagne s'établit à 2,4 % en juin 2024.", "%",
+         "2024-07-01", Regime.FAIBLE, "v2 : pays étranger"),
+        ("Le taux de chômage atteindra 6,5 % en 2027.", "%", "2024-03-01",
+         Regime.FAIBLE, "v2 : année future"),
+        ("La dette publique a représenté 110,6 % du PIB en 2023.", "%",
+         "2024-03-26", Regime.FORTE, "v2 : % du PIB → dette, pas PIB"),
+    ]
+    for phrase, unite, date, attendu, libelle in cas_v2:
+        total += 1
+        res = clf.classer("TEST", phrase, unite_m2=unite, date_article=date)
+        ok = res.regime == attendu
+        if not ok:
+            erreurs += 1
+        print(f"{'✅' if ok else '❌'} {libelle:30s} → {res.regime.value:35s} "
+              f"(indicateur={res.indicateur_officiel or '-'})")
         if not ok:
             print(f"     Attendu : {attendu.value}")
             print(f"     Justif  : {res.justification}")
