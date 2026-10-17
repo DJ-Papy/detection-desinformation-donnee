@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----------------------------------------------------------------------------
-Scope / Périmètre
-
-This license covers the source code and the fictional example corpus
-(data/exemple/). It does NOT cover the thesis and its appendices stored in
-docs/memoire/, which remain © 2026 Florian PRIVAT, all rights reserved.
-
-Cette licence couvre le code source et le corpus fictif d'exemple
-(data/exemple/). Elle ne couvre PAS le mémoire et ses annexes
-(docs/memoire/), qui restent © 2026 Florian PRIVAT, tous droits réservés.
