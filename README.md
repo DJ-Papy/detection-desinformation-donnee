@@ -31,6 +31,8 @@ Code du mémoire de recherche appliquée de Florian PRIVAT, MSc 2 Manager en Dat
 
 **Question** : *dans quelle mesure peut-on détecter de la désinformation médiatique par la donnée ?*
 
+**Reformulation opérationnelle** : automatiser la vérification des données chiffrées de la presse française par recoupement avec des sources officielles, sur 2023-2024.
+
 Le mémoire part d'une distinction : tous les chiffres de presse ne se vérifient pas de la même façon.
 
 | | Régime 1 : vérifiabilité forte | Régime 2 : vérifiabilité faible |
@@ -52,7 +54,7 @@ Le mémoire part d'une distinction : tous les chiffres de presse ne se vérifien
 | Événements couverts par ≥ 3 médias | 27 | §2.6 |
 | Indice de divergence des sélections (0 = mêmes chiffres, 1 = aucun en commun) | 0,80 en moyenne | §2.6 |
 
-**Lecture** : la vérification automatique ne porte que sur une fraction marginale du discours chiffré ; l'essentiel relève du cadrage. Le mémoire est disponible dans [`docs/memoire/`](docs/memoire/).
+**Lecture** : la vérification automatique ne porte que sur une fraction marginale du discours chiffré ; l'essentiel relève du cadrage. Le mémoire, ses annexes et le diaporama de soutenance sont disponibles dans [`docs/memoire/`](docs/memoire/).
 
 ## 2. À lire avant d'utiliser ce code
 
@@ -81,6 +83,8 @@ flowchart TD
     M4 --> FC[("Tableau de fact-checking")]
     M5 --> CA[("Indice de divergence par événement")]
 ```
+
+**Ordre d'exécution.** Le mémoire (§2.1.2) et le diaporama de soutenance présentent la classification (1.5) avant la structuration (2). Dans le code, la structuration s'exécute d'abord : le classifieur s'appuie sur l'indicateur et l'unité qu'elle produit, comme le décrit le §2.3.2. Le numéro 1.5 désigne le rôle du module (décider de l'aiguillage), pas sa position dans l'exécution.
 
 | Fichier | Rôle | Choix méthodologique clé |
 |---|---|---|
@@ -189,7 +193,7 @@ Le dossier `data/corpus/` est exclu de Git par `.gitignore` : vos articles ne se
 │   ├── reproduire_les_resultats.md
 │   ├── limites_connues.md    limites, effet probable sur les chiffres, correctifs
 │   ├── idbank_insee.md       séries INSEE retenues et comment les vérifier
-│   └── memoire/              mémoire et annexes (PDF)
+│   └── memoire/              mémoire, annexes et diaporama de soutenance (PDF)
 ├── CHANGELOG.md              v1 → v2, et ce qui a été reconstruit
 ├── CITATION.cff
 └── LICENSE
@@ -222,4 +226,4 @@ Le fichier [`CITATION.cff`](CITATION.cff) fournit la référence au format atten
 
 ## Licence
 
-Code et corpus fictif : [MIT](LICENSE). Le mémoire et ses annexes (`docs/memoire/`) **ne sont pas** sous licence MIT : tous droits réservés à l'auteur.
+Code et corpus fictif : [MIT](LICENSE). Le mémoire, ses annexes et le diaporama de soutenance (`docs/memoire/`) **ne sont pas** sous licence MIT : tous droits réservés à l'auteur.
