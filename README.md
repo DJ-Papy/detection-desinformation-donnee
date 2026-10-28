@@ -6,6 +6,7 @@ Code du mémoire de recherche appliquée de Florian PRIVAT, MSc 2 Manager en Dat
 [![tests](https://github.com/DJ-Papy/detection-desinformation-donnee/actions/workflows/tests.yml/badge.svg)](https://github.com/DJ-Papy/detection-desinformation-donnee/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 [![Licence : MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23737969.svg)](https://doi.org/10.5281/zenodo.23737969)
 
 > *English summary.* This repository contains the code of a French master's thesis asking to what extent media disinformation can be detected through data. A rule-based, interpretable pipeline extracts numerical claims from French press articles, sorts them into two "verifiability regimes", checks the verifiable ones against INSEE time series (SDMX API), and measures how outlets differ in which figures they select for the same event. On 562 articles (2023-2024), only about 5 % of figures were strongly verifiable and about 1 % could be matched to a dated official series. Documentation is in French.
 
@@ -219,6 +220,15 @@ Les principales, détaillées avec leur effet probable sur les chiffres dans [`d
 Conformément à la note figurant dans le mémoire (p. 69), des assistants d'IA ont aidé à générer et déboguer le code du pipeline, puis à préparer cette publication (reconstruction de la version 2 d'après le mémoire, tests, documentation). Les décisions de fond relèvent de l'auteur : collecte manuelle du corpus, cadre des deux régimes, seuils de tolérance, choix des séries INSEE, règles de classification et interprétation des résultats.
 
 ## 11. Citer ce travail
+
+Le code est archivé sur Zenodo, qui attribue à chaque version publiée un DOI pérenne :
+
+- version 2.0.1 : [10.5281/zenodo.23737970](https://doi.org/10.5281/zenodo.23737970) ;
+- toutes versions (renvoie toujours vers la plus récente) : [10.5281/zenodo.23737969](https://doi.org/10.5281/zenodo.23737969).
+
+Pour citer le code tel que vous l'avez utilisé, préférez le DOI de la version :
+
+> PRIVAT, F. (2026). *Détecter la désinformation médiatique par la donnée : pipeline de vérification des chiffres de presse* (version 2.0.1) [Logiciel]. Zenodo. https://doi.org/10.5281/zenodo.23737970
 
 Le fichier [`CITATION.cff`](CITATION.cff) fournit la référence au format attendu par GitHub (bouton *Cite this repository*). Pour citer le mémoire :
 
