@@ -2,6 +2,17 @@
 
 Le format s'inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Les numéros suivent le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [2.0.1] — 2026-10-28 — documentation alignée sur la soutenance
+
+Aucune modification du code : les résultats et le comportement sont ceux de la 2.0.0.
+
+### Modifié
+
+- Licence : texte MIT standard, reconnu par GitHub. La mention « tous droits réservés » du mémoire passe dans `docs/memoire/README.md`.
+- README : reformulation opérationnelle de la problématique ; paragraphe sur l'ordre d'exécution des modules (le mémoire et le diaporama présentent 1.5 avant 2, le code exécute 2 avant 1.5).
+- `docs/memoire/` : mémoire remplacé par la version soutenue (corrections typographiques uniquement) ; diaporama de soutenance ajouté.
+- `CITATION.cff` : version 2.0.1.
+
 ## [2.0.0] — 2026-10-16 — version du mémoire, reconstruite
 
 Version correspondant aux règles décrites dans le mémoire déposé le 15 juillet 2026 (Partie II, §2.2 à §2.6).
