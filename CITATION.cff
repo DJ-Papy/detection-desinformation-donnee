@@ -6,6 +6,14 @@ version: 2.0.1
 date-released: "2026-10-28"
 license: MIT
 repository-code: "https://github.com/DJ-Papy/detection-desinformation-donnee"
+doi: "10.5281/zenodo.23737970"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23737970"
+    description: "DOI Zenodo de la version 2.0.1"
+  - type: doi
+    value: "10.5281/zenodo.23737969"
+    description: "DOI Zenodo de toutes les versions (renvoie vers la plus récente)"
 authors:
   - family-names: PRIVAT
     given-names: Florian
