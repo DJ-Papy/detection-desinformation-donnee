@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "Si vous utilisez ce code, merci de citer le logiciel et le mémoire associé."
 title: "Détecter la désinformation médiatique par la donnée : pipeline de vérification des chiffres de presse"
 type: software
-version: 2.0.0
-date-released: "2026-10-16"
+version: 2.0.1
+date-released: "2026-10-28"
 license: MIT
 repository-code: "https://github.com/DJ-Papy/detection-desinformation-donnee"
 authors:
