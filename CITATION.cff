@@ -17,12 +17,16 @@ identifiers:
 authors:
   - family-names: PRIVAT
     given-names: Florian
+    affiliation: INSEEC
 abstract: >-
   Pipeline modulaire et interprétable qui extrait les affirmations chiffrées
   d'articles de presse française, les classe en deux régimes de
   vérifiabilité, confronte les chiffres vérifiables aux séries de l'INSEE
   (API SDMX de la BDM) et mesure la divergence des chiffres retenus par
-  différents médias pour un même événement.
+  différents médias pour un même événement. Droits : le code et le corpus
+  d'exemple fictif sont sous licence MIT ; le mémoire, ses annexes et le
+  diaporama de soutenance (docs/memoire/) ne sont pas sous licence MIT,
+  tous droits réservés à l'auteur.
 keywords:
   - désinformation
   - fact-checking automatisé
